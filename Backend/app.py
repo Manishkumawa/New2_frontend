@@ -1,5 +1,5 @@
 from flask import Flask,request,jsonify,redirect ,session ,url_for
-from flask_jwt_extended import JWTManager,jwt_required,create_access_token ,get_jwt_identity
+from flask_jwt_extended import JWTManager,jwt_required,create_access_token ,get_jwt_identity,get_current_user
 from pymongo import MongoClient
 
 from gridfs import GridFS
@@ -100,9 +100,10 @@ def login():
 def create_dish():
     
     user_info = get_jwt_identity()
-    first_name = user_info['first_name']
-    last_name  = user_info['last_name']
-    name = first_name  +last_name
+    
+    login_user = db.AllUser.find_one({'email':user_info},{'first_name':1 ,'last_name':1})
+
+    name = login_user['first_name']+" "+ login_user['last_name']
 
     dish_name =  request.form["name"]
     veg_non_veg = request.form["veg_non_veg"]
@@ -128,7 +129,8 @@ def create_dish():
     
     db.Dish.insert_one({'dish_name':dish_name ,'veg_Non':veg_non_veg ,'description':description ,"Popularity_state":pop_state ,"created_by":name ,"Cuisine":cuisine,"kitchen_equi":kitchen_equi,"course_type":course_type,"created_date":formatted_date,"created_time":formatted_time ,"quantity":quantity,"unit":unit,"i_name":i_name})
     
-    return jsonify({'Message':'Dished Saved Successfully'}),201
+    #return jsonify({'Message':'Dished Saved Successfully'}),201
+    return ingredients ,instructions
     
 
 
@@ -138,34 +140,40 @@ def nextPage():
 
     user_info = get_jwt_identity()   
    
-    first_name = user_info['first_name']
-    last_name  = user_info['last_name']
-    name = first_name +last_name
+    login_user = db.AllUser.find_one({'email':user_info},{'first_name':1 ,'last_name':1})
+    name = login_user['first_name']  +" " + login_user['last_name']
 
     dis = db.Dish.find({"created_by":name})
-    '''
+    
     output =[]
 
     for dish in dis:
         dish_data = {
             "dish_name" :dish['dish_name'],
-            "cuisine":dish['cuisine'],
-            "veg_non":dish['veg_non'],
+            "cuisine":dish['Cuisine'],
+            "veg_non":dish['veg_Non'],
             "course_type":dish['course_type'],
             "created_date":dish['created_date'],
             "created_time":dish['created_time'],
-            "description":dish['Description']   
+            "description":dish['description']   
         }
         output.append(dish_data)
 
-        '''
+        
     
         
 
-    return jsonify({'list_of_dishes':dis,"user":name})
+    return jsonify({'list_of_dishes':output,"user":name})
 
 
-
+@app.route('/show')
+@jwt_required()
+def show():
+    user_info  = get_jwt_identity()
+    login_user = db.AllUser.find_one({'email':user_info},{'first_name':1 ,'last_name':1})
+    name = login_user['first_name']  +" " + login_user['last_name']
+    return name 
+    
 @app.route('/api/contact',methods =['POST'])
 def contact():
 
